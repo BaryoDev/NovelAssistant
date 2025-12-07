@@ -1,0 +1,149 @@
+{
+    "publisher": "baryo-dev",
+    "name": "novel-assistant",
+    "displayName": "Novel Assistant",
+    "description": "The ultimate creative writing environment for VS Code. Features a distraction-free WYSIWYG editor, character management, and project organization tools designed specifically for novelists.",
+    "version": "0.0.1",
+    "icon": "resources/icon.png",
+    "author": {
+        "name": "Arnel Robles"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/arnelirobles/novel-assistant.git"
+    },
+    "homepage": "https://github.com/arnelirobles/novel-assistant/blob/master/README.md",
+    "bugs": {
+        "url": "https://github.com/arnelirobles/novel-assistant/issues"
+    },
+    "keywords": [
+        "novel",
+        "writer",
+        "writing",
+        "fiction",
+        "book",
+        "editor",
+        "wysiwyg",
+        "markdown",
+        "creative writing",
+        "story"
+    ],
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Other",
+        "Visualization"
+    ],
+    "activationEvents": [],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "novel-assistant.helloWorld",
+                "title": "Novel Assistant: Hello World"
+            },
+            {
+                "command": "novel-assistant.newProject",
+                "title": "Novel Assistant: New Project"
+            },
+            {
+                "command": "novel-assistant.refreshEntry",
+                "title": "Refresh",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "novel-assistant.showStats",
+                "title": "Novel Assistant: Show Detailed Stats"
+            },
+            {
+                "command": "novel-assistant.compareHead",
+                "title": "Compare with Saved",
+                "icon": "$(diff)"
+            },
+            {
+                "command": "novel-assistant.viewHistory",
+                "title": "View History",
+                "icon": "$(history)"
+            }
+        ],
+        "menus": {
+            "view/item/context": [
+                {
+                    "command": "novel-assistant.compareHead",
+                    "when": "view == novel-structure && viewItem == scene",
+                    "group": "inline"
+                },
+                {
+                    "command": "novel-assistant.viewHistory",
+                    "when": "view == novel-structure && viewItem == scene",
+                    "group": "inline"
+                }
+            ],
+            "view/title": [
+                {
+                    "command": "novel-assistant.refreshEntry",
+                    "when": "view == novel-structure",
+                    "group": "navigation"
+                }
+            ]
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "novel-assistant-sidebar",
+                    "title": "Novel Assistant",
+                    "icon": "resources/book.svg"
+                }
+            ]
+        },
+        "views": {
+            "novel-assistant-sidebar": [
+                {
+                    "id": "novel-structure",
+                    "name": "Structure"
+                }
+            ]
+        },
+        "customEditors": [
+            {
+                "viewType": "novel-assistant.wysiwyg",
+                "displayName": "Novel WYSIWYG Editor",
+                "selector": [
+                    {
+                        "filenamePattern": "*.md"
+                    }
+                ],
+                "priority": "option"
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run package",
+        "compile": "webpack",
+        "watch": "webpack --watch",
+        "package": "webpack --mode production --devtool hidden-source-map",
+        "compile-tests": "tsc -p . --outDir out",
+        "watch-tests": "tsc -p . -w --outDir out",
+        "pretest": "npm run compile-tests && npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js"
+    },
+    "devDependencies": {
+        "@types/glob": "^8.1.0",
+        "@types/mocha": "^10.0.6",
+        "@types/node": "20.x",
+        "@types/vscode": "^1.85.0",
+        "@typescript-eslint/eslint-plugin": "^6.15.0",
+        "@typescript-eslint/parser": "^6.15.0",
+        "@vscode/test-electron": "^2.3.8",
+        "eslint": "^8.56.0",
+        "glob": "^8.1.0",
+        "mocha": "^10.2.0",
+        "svg-to-png-cli": "^1.2.0",
+        "ts-loader": "^9.5.1",
+        "typescript": "^5.3.3",
+        "webpack": "^5.89.0",
+        "webpack-cli": "^5.1.4"
+    }
+}

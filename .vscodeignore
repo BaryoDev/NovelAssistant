@@ -1,0 +1,50 @@
+# Source files (compiled to dist/)
+src/**
+
+# TypeScript config
+tsconfig.json
+
+# Node modules (bundled by webpack)
+node_modules/**
+
+# Development files
+.vscode/**
+.vscode-test/**
+.claude/**
+
+# Build artifacts
+out/**
+*.vsix
+
+# Source maps (not needed for production)
+**/*.map
+
+# Git
+.git/**
+.gitignore
+
+# Config files
+webpack.config.js
+.eslintrc*
+.prettierrc*
+
+# Documentation (keep README and CHANGELOG)
+docs/**
+
+# Test files
+**/test/**
+**/*.test.ts
+**/*.test.js
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.log
+*.tmp

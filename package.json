@@ -2,8 +2,8 @@
     "publisher": "baryo-dev",
     "name": "novel-assistant",
     "displayName": "Novel Assistant",
-    "description": "The ultimate creative writing environment for VS Code. Features a distraction-free WYSIWYG editor, character management, and project organization tools designed specifically for novelists.",
-    "version": "0.0.1",
+    "description": "The ultimate creative writing environment for VS Code. Features a distraction-free WYSIWYG editor, character management, writing sprints, progress tracking, and export tools designed specifically for novelists.",
+    "version": "0.1.0",
     "icon": "resources/icon.png",
     "author": {
         "name": "Arnel Robles"
@@ -26,7 +26,10 @@
         "wysiwyg",
         "markdown",
         "creative writing",
-        "story"
+        "story",
+        "author",
+        "screenplay",
+        "distraction-free"
     ],
     "engines": {
         "vscode": "^1.85.0"
@@ -40,12 +43,9 @@
     "contributes": {
         "commands": [
             {
-                "command": "novel-assistant.helloWorld",
-                "title": "Novel Assistant: Hello World"
-            },
-            {
                 "command": "novel-assistant.newProject",
-                "title": "Novel Assistant: New Project"
+                "title": "Novel Assistant: New Project",
+                "icon": "$(new-folder)"
             },
             {
                 "command": "novel-assistant.refreshEntry",
@@ -54,7 +54,8 @@
             },
             {
                 "command": "novel-assistant.showStats",
-                "title": "Novel Assistant: Show Detailed Stats"
+                "title": "Novel Assistant: Show Progress Dashboard",
+                "icon": "$(graph)"
             },
             {
                 "command": "novel-assistant.compareHead",
@@ -65,6 +66,77 @@
                 "command": "novel-assistant.viewHistory",
                 "title": "View History",
                 "icon": "$(history)"
+            },
+            {
+                "command": "novel-assistant.startSprint",
+                "title": "Novel Assistant: Start Writing Sprint",
+                "icon": "$(clock)"
+            },
+            {
+                "command": "novel-assistant.stopSprint",
+                "title": "Novel Assistant: Stop Writing Sprint",
+                "icon": "$(debug-stop)"
+            },
+            {
+                "command": "novel-assistant.toggleSprint",
+                "title": "Novel Assistant: Toggle Writing Sprint",
+                "icon": "$(play)"
+            },
+            {
+                "command": "novel-assistant.export",
+                "title": "Novel Assistant: Export Manuscript",
+                "icon": "$(export)"
+            },
+            {
+                "command": "novel-assistant.backup",
+                "title": "Novel Assistant: Create Backup",
+                "icon": "$(save-all)"
+            },
+            {
+                "command": "novel-assistant.analyzeWriting",
+                "title": "Novel Assistant: Analyze Writing",
+                "icon": "$(beaker)"
+            },
+            {
+                "command": "novel-assistant.searchProject",
+                "title": "Novel Assistant: Search in Project",
+                "icon": "$(search)"
+            },
+            {
+                "command": "novel-assistant.searchAndReplace",
+                "title": "Novel Assistant: Search and Replace in Project",
+                "icon": "$(replace-all)"
+            },
+            {
+                "command": "novel-assistant.newChapter",
+                "title": "Novel Assistant: New Chapter",
+                "icon": "$(new-folder)"
+            },
+            {
+                "command": "novel-assistant.newScene",
+                "title": "Novel Assistant: New Scene",
+                "icon": "$(new-file)"
+            },
+            {
+                "command": "novel-assistant.newCharacter",
+                "title": "Novel Assistant: New Character",
+                "icon": "$(person-add)"
+            },
+            {
+                "command": "novel-assistant.toggleTypewriterMode",
+                "title": "Novel Assistant: Toggle Typewriter Mode"
+            },
+            {
+                "command": "novel-assistant.toggleFocusMode",
+                "title": "Novel Assistant: Toggle Focus Mode"
+            },
+            {
+                "command": "novel-assistant.setTheme",
+                "title": "Novel Assistant: Set Editor Theme"
+            },
+            {
+                "command": "novel-assistant.setGoals",
+                "title": "Novel Assistant: Set Writing Goals"
             }
         ],
         "menus": {
@@ -85,6 +157,30 @@
                     "command": "novel-assistant.refreshEntry",
                     "when": "view == novel-structure",
                     "group": "navigation"
+                },
+                {
+                    "command": "novel-assistant.newChapter",
+                    "when": "view == novel-structure",
+                    "group": "navigation"
+                },
+                {
+                    "command": "novel-assistant.newScene",
+                    "when": "view == novel-structure",
+                    "group": "navigation"
+                }
+            ],
+            "commandPalette": [
+                {
+                    "command": "novel-assistant.compareHead",
+                    "when": "false"
+                },
+                {
+                    "command": "novel-assistant.viewHistory",
+                    "when": "false"
+                },
+                {
+                    "command": "novel-assistant.refreshEntry",
+                    "when": "false"
                 }
             ]
         },
@@ -101,7 +197,17 @@
             "novel-assistant-sidebar": [
                 {
                     "id": "novel-structure",
-                    "name": "Structure"
+                    "name": "Manuscript"
+                },
+                {
+                    "type": "webview",
+                    "id": "novel-assistant.outlineView",
+                    "name": "Outline"
+                },
+                {
+                    "type": "webview",
+                    "id": "novel-assistant.characterPanel",
+                    "name": "Characters"
                 }
             ]
         },
@@ -115,6 +221,134 @@
                     }
                 ],
                 "priority": "option"
+            }
+        ],
+        "configuration": {
+            "title": "Novel Assistant",
+            "properties": {
+                "novel-assistant.editor.theme": {
+                    "type": "string",
+                    "default": "auto",
+                    "enum": ["auto", "light", "dark", "sepia", "highContrast"],
+                    "enumDescriptions": [
+                        "Follow VS Code theme",
+                        "Light paper theme",
+                        "Dark theme",
+                        "Warm sepia tones",
+                        "High contrast for accessibility"
+                    ],
+                    "description": "Editor color theme"
+                },
+                "novel-assistant.editor.fontSize": {
+                    "type": "number",
+                    "default": 18,
+                    "minimum": 12,
+                    "maximum": 32,
+                    "description": "Editor font size in pixels"
+                },
+                "novel-assistant.editor.fontFamily": {
+                    "type": "string",
+                    "default": "Merriweather",
+                    "enum": ["Merriweather", "Lora", "Source Serif Pro", "PT Serif", "Georgia"],
+                    "description": "Editor font family"
+                },
+                "novel-assistant.editor.lineHeight": {
+                    "type": "number",
+                    "default": 1.8,
+                    "minimum": 1.2,
+                    "maximum": 3.0,
+                    "description": "Editor line height multiplier"
+                },
+                "novel-assistant.editor.maxWidth": {
+                    "type": "number",
+                    "default": 720,
+                    "minimum": 400,
+                    "maximum": 1200,
+                    "description": "Maximum content width in pixels"
+                },
+                "novel-assistant.editor.typewriterMode": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Keep the cursor vertically centered while typing"
+                },
+                "novel-assistant.editor.focusMode": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Dim non-active paragraphs for better focus"
+                },
+                "novel-assistant.editor.showToolbar": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show the formatting toolbar"
+                },
+                "novel-assistant.dailyWordGoal": {
+                    "type": "number",
+                    "default": 1000,
+                    "minimum": 100,
+                    "maximum": 50000,
+                    "description": "Daily word count goal"
+                },
+                "novel-assistant.wordsPerMinute": {
+                    "type": "number",
+                    "default": 200,
+                    "minimum": 100,
+                    "maximum": 500,
+                    "description": "Words per minute for reading time calculation"
+                },
+                "novel-assistant.sprintDuration": {
+                    "type": "number",
+                    "default": 25,
+                    "minimum": 5,
+                    "maximum": 120,
+                    "description": "Default writing sprint duration in minutes"
+                },
+                "novel-assistant.autoBackup.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable automatic Git backups"
+                },
+                "novel-assistant.autoBackup.intervalMinutes": {
+                    "type": "number",
+                    "default": 30,
+                    "minimum": 5,
+                    "maximum": 120,
+                    "description": "Auto-backup interval in minutes"
+                },
+                "novel-assistant.autoBackup.includeTimestamp": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Include timestamp in auto-backup commit messages"
+                }
+            }
+        },
+        "keybindings": [
+            {
+                "command": "novel-assistant.startSprint",
+                "key": "ctrl+shift+s",
+                "mac": "cmd+shift+s",
+                "when": "editorTextFocus && editorLangId == markdown"
+            },
+            {
+                "command": "novel-assistant.toggleTypewriterMode",
+                "key": "ctrl+shift+t",
+                "mac": "cmd+shift+t",
+                "when": "editorTextFocus && editorLangId == markdown"
+            },
+            {
+                "command": "novel-assistant.toggleFocusMode",
+                "key": "ctrl+alt+f",
+                "mac": "cmd+alt+f",
+                "when": "editorTextFocus && editorLangId == markdown"
+            },
+            {
+                "command": "novel-assistant.searchProject",
+                "key": "ctrl+shift+h",
+                "mac": "cmd+shift+h"
+            },
+            {
+                "command": "novel-assistant.newScene",
+                "key": "ctrl+shift+n",
+                "mac": "cmd+shift+n"
             }
         ]
     },
@@ -133,6 +367,7 @@
         "@types/glob": "^8.1.0",
         "@types/mocha": "^10.0.6",
         "@types/node": "20.x",
+        "@types/pdfkit": "^0.17.4",
         "@types/vscode": "^1.85.0",
         "@typescript-eslint/eslint-plugin": "^6.15.0",
         "@typescript-eslint/parser": "^6.15.0",
@@ -145,5 +380,11 @@
         "typescript": "^5.3.3",
         "webpack": "^5.89.0",
         "webpack-cli": "^5.1.4"
+    },
+    "dependencies": {
+        "docx": "^9.5.1",
+        "epub-gen-memory": "^1.1.2",
+        "pdfkit": "^0.17.2",
+        "simple-git": "^3.30.0"
     }
 }

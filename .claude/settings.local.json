@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(npm install:*)",
+      "Bash(curl:*)",
+      "Bash(npm run compile:*)",
+      "Bash(npm run lint)"
+    ]
+  }
+}

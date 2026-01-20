@@ -1,0 +1,315 @@
+import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+
+interface Character {
+    name: string;
+    filePath: string;
+    role?: string;
+    description?: string;
+}
+
+export class CharacterPanelProvider implements vscode.WebviewViewProvider {
+    public static readonly viewType = 'novel-assistant.characterPanel';
+    private _view?: vscode.WebviewView;
+    private rootPath: string | undefined;
+
+    constructor(private readonly context: vscode.ExtensionContext) {
+        this.rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    }
+
+    public resolveWebviewView(
+        webviewView: vscode.WebviewView,
+        _context: vscode.WebviewViewResolveContext,
+        _token: vscode.CancellationToken
+    ): void {
+        this._view = webviewView;
+
+        webviewView.webview.options = {
+            enableScripts: true,
+            localResourceRoots: [this.context.extensionUri],
+        };
+
+        webviewView.webview.html = this.getHtml();
+
+        webviewView.webview.onDidReceiveMessage(async (message) => {
+            switch (message.command) {
+                case 'openCharacter':
+                    this.openCharacter(message.filePath);
+                    break;
+                case 'newCharacter':
+                    this.createNewCharacter();
+                    break;
+                case 'refresh':
+                    this.refresh();
+                    break;
+            }
+        });
+    }
+
+    public refresh(): void {
+        if (this._view) {
+            this._view.webview.html = this.getHtml();
+        }
+    }
+
+    private getCharacters(): Character[] {
+        if (!this.rootPath) {
+            return [];
+        }
+
+        const charactersPath = path.join(this.rootPath, 'Characters');
+
+        try {
+            if (!fs.existsSync(charactersPath)) {
+                return [];
+            }
+
+            const files = fs.readdirSync(charactersPath).filter(f => f.endsWith('.md'));
+
+            return files.map(file => {
+                const filePath = path.join(charactersPath, file);
+                const content = this.safeReadFile(filePath);
+                const parsed = this.parseCharacterFile(content);
+
+                return {
+                    name: file.replace('.md', ''),
+                    filePath,
+                    role: parsed.role,
+                    description: parsed.description,
+                };
+            });
+        } catch {
+            return [];
+        }
+    }
+
+    private safeReadFile(filePath: string): string {
+        try {
+            return fs.readFileSync(filePath, 'utf-8');
+        } catch {
+            return '';
+        }
+    }
+
+    private parseCharacterFile(content: string): { role?: string; description?: string } {
+        const result: { role?: string; description?: string } = {};
+
+        // Try to extract role from markdown
+        const roleMatch = content.match(/^##?\s*Role:?\s*(.+)$/im);
+        if (roleMatch) {
+            result.role = roleMatch[1].trim();
+        }
+
+        // Try to extract first paragraph as description
+        const lines = content.split('\n').filter(l => l.trim() && !l.startsWith('#'));
+        if (lines.length > 0) {
+            result.description = lines[0].substring(0, 100) + (lines[0].length > 100 ? '...' : '');
+        }
+
+        return result;
+    }
+
+    private async openCharacter(filePath: string): Promise<void> {
+        try {
+            const doc = await vscode.workspace.openTextDocument(filePath);
+            await vscode.window.showTextDocument(doc);
+        } catch {
+            // Silent fail
+        }
+    }
+
+    private async createNewCharacter(): Promise<void> {
+        if (!this.rootPath) {
+            return;
+        }
+
+        const name = await vscode.window.showInputBox({
+            prompt: 'Enter character name',
+            placeHolder: 'e.g., John Smith',
+        });
+
+        if (!name) {
+            return;
+        }
+
+        const charactersPath = path.join(this.rootPath, 'Characters');
+
+        try {
+            if (!fs.existsSync(charactersPath)) {
+                fs.mkdirSync(charactersPath, { recursive: true });
+            }
+
+            const filePath = path.join(charactersPath, `${name}.md`);
+
+            const template = `# ${name}
+
+## Role
+[Main character / Supporting / Antagonist / etc.]
+
+## Physical Description
+- Age:
+- Appearance:
+- Distinguishing features:
+
+## Personality
+- Traits:
+- Strengths:
+- Weaknesses:
+
+## Background
+[Brief backstory]
+
+## Goals & Motivations
+[What does this character want?]
+
+## Relationships
+[Connections to other characters]
+
+## Notes
+[Additional notes]
+`;
+
+            fs.writeFileSync(filePath, template);
+
+            const doc = await vscode.workspace.openTextDocument(filePath);
+            await vscode.window.showTextDocument(doc);
+
+            this.refresh();
+        } catch {
+            // Silent fail
+        }
+    }
+
+    private getHtml(): string {
+        const characters = this.getCharacters();
+
+        const characterCards = characters.length > 0
+            ? characters.map(c => `
+                <div class="character-card" onclick="openCharacter('${c.filePath.replace(/\\/g, '\\\\')}')">
+                    <div class="character-avatar">${c.name.charAt(0).toUpperCase()}</div>
+                    <div class="character-info">
+                        <div class="character-name">${c.name}</div>
+                        ${c.role ? `<div class="character-role">${c.role}</div>` : ''}
+                    </div>
+                </div>
+            `).join('')
+            : '<div class="empty-state">No characters yet. Click + to add one.</div>';
+
+        return `<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            padding: 10px;
+            margin: 0;
+            background: transparent;
+            color: var(--vscode-foreground);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--vscode-widget-border);
+        }
+        .title {
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+        }
+        .actions button {
+            background: transparent;
+            border: none;
+            color: var(--vscode-foreground);
+            cursor: pointer;
+            padding: 4px 8px;
+            font-size: 16px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .actions button:hover { opacity: 1; }
+
+        .character-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: var(--vscode-list-hoverBackground);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .character-card:hover {
+            background: var(--vscode-list-activeSelectionBackground);
+        }
+        .character-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #569cd6, #4ec9b0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            color: white;
+            flex-shrink: 0;
+        }
+        .character-info { flex: 1; min-width: 0; }
+        .character-name {
+            font-weight: 500;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .character-role {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 30px 10px;
+            opacity: 0.6;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="title">Characters</span>
+        <div class="actions">
+            <button onclick="refresh()" title="Refresh">↻</button>
+            <button onclick="newCharacter()" title="New Character">+</button>
+        </div>
+    </div>
+    <div class="character-list">
+        ${characterCards}
+    </div>
+    <script>
+        const vscode = acquireVsCodeApi();
+        function openCharacter(filePath) {
+            vscode.postMessage({ command: 'openCharacter', filePath });
+        }
+        function newCharacter() {
+            vscode.postMessage({ command: 'newCharacter' });
+        }
+        function refresh() {
+            vscode.postMessage({ command: 'refresh' });
+        }
+    </script>
+</body>
+</html>`;
+    }
+
+    public dispose(): void {
+        // Cleanup if needed
+    }
+}

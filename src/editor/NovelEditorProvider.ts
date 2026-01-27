@@ -343,9 +343,124 @@ export class NovelEditorProvider implements vscode.CustomTextEditorProvider {
                         margin: 0 auto;
                         padding: 40px 20px !important;
                     }
+
+                    /* Toast Notification System */
+                    .toast-container {
+                        position: fixed;
+                        bottom: 20px;
+                        right: 20px;
+                        z-index: 1000;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 8px;
+                        pointer-events: none;
+                    }
+
+                    .toast {
+                        background: var(--text-color);
+                        color: var(--bg-color);
+                        padding: 10px 16px;
+                        border-radius: 6px;
+                        font-size: 13px;
+                        font-family: 'Roboto', sans-serif;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                        opacity: 0;
+                        transform: translateY(10px) scale(0.95);
+                        animation: toastIn 0.3s ease forwards;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    }
+
+                    .toast.toast-out {
+                        animation: toastOut 0.2s ease forwards;
+                    }
+
+                    .toast-icon {
+                        font-size: 14px;
+                    }
+
+                    @keyframes toastIn {
+                        to {
+                            opacity: 1;
+                            transform: translateY(0) scale(1);
+                        }
+                    }
+
+                    @keyframes toastOut {
+                        to {
+                            opacity: 0;
+                            transform: translateY(-10px) scale(0.95);
+                        }
+                    }
+
+                    /* Mode Indicators */
+                    .mode-indicators {
+                        position: fixed;
+                        top: 12px;
+                        right: 12px;
+                        display: flex;
+                        gap: 6px;
+                        z-index: 50;
+                        opacity: 0;
+                        transform: translateY(-10px);
+                        transition: opacity 0.3s, transform 0.3s;
+                    }
+
+                    .mode-indicators.visible {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+
+                    .mode-badge {
+                        padding: 4px 10px;
+                        border-radius: 12px;
+                        font-size: 10px;
+                        font-family: 'Roboto', sans-serif;
+                        font-weight: 500;
+                        text-transform: uppercase;
+                        letter-spacing: 0.05em;
+                        background: var(--selection-color);
+                        color: var(--toolbar-hover);
+                        backdrop-filter: blur(4px);
+                        display: none;
+                    }
+
+                    .mode-badge.active {
+                        display: block;
+                    }
+
+                    .mode-badge.typewriter {
+                        background: rgba(86, 156, 214, 0.2);
+                        color: #569cd6;
+                    }
+
+                    .mode-badge.focus {
+                        background: rgba(78, 201, 176, 0.2);
+                        color: #4ec9b0;
+                    }
+
+                    body.theme-dark .mode-badge.typewriter,
+                    body.vscode-dark .mode-badge.typewriter {
+                        background: rgba(86, 156, 214, 0.3);
+                    }
+
+                    body.theme-dark .mode-badge.focus,
+                    body.vscode-dark .mode-badge.focus {
+                        background: rgba(78, 201, 176, 0.3);
+                    }
                 </style>
             </head>
             <body>
+                <!-- Mode Indicators -->
+                <div class="mode-indicators" id="modeIndicators">
+                    <span class="mode-badge typewriter" id="typewriterBadge">Typewriter</span>
+                    <span class="mode-badge focus" id="focusBadge">Focus</span>
+                </div>
+
+                <!-- Toast Container -->
+                <div class="toast-container" id="toastContainer"></div>
+
                 <textarea id="editor"></textarea>
                 ${jsScript}
                 <script>
@@ -360,18 +475,127 @@ export class NovelEditorProvider implements vscode.CustomTextEditorProvider {
                             status: false,
                             autosave: { enabled: false },
                             toolbar: [
-                                "bold", "italic", "strikethrough", "|",
-                                "heading-1", "heading-2", "heading-3", "|",
-                                "quote", "unordered-list", "ordered-list", "|",
-                                "link", "image", "|",
-                                "preview", "side-by-side", "fullscreen", "|",
-                                "guide"
+                                {
+                                    name: "bold",
+                                    action: EasyMDE.toggleBold,
+                                    className: "fa fa-bold",
+                                    title: "Bold (Cmd-B)",
+                                    attributes: { "aria-label": "Toggle bold formatting" }
+                                },
+                                {
+                                    name: "italic",
+                                    action: EasyMDE.toggleItalic,
+                                    className: "fa fa-italic",
+                                    title: "Italic (Cmd-I)",
+                                    attributes: { "aria-label": "Toggle italic formatting" }
+                                },
+                                {
+                                    name: "strikethrough",
+                                    action: EasyMDE.toggleStrikethrough,
+                                    className: "fa fa-strikethrough",
+                                    title: "Strikethrough",
+                                    attributes: { "aria-label": "Toggle strikethrough" }
+                                },
+                                "|",
+                                {
+                                    name: "heading-1",
+                                    action: EasyMDE.toggleHeading1,
+                                    className: "fa fa-header fa-header-x fa-header-1",
+                                    title: "Heading 1",
+                                    attributes: { "aria-label": "Insert heading level 1" }
+                                },
+                                {
+                                    name: "heading-2",
+                                    action: EasyMDE.toggleHeading2,
+                                    className: "fa fa-header fa-header-x fa-header-2",
+                                    title: "Heading 2",
+                                    attributes: { "aria-label": "Insert heading level 2" }
+                                },
+                                {
+                                    name: "heading-3",
+                                    action: EasyMDE.toggleHeading3,
+                                    className: "fa fa-header fa-header-x fa-header-3",
+                                    title: "Heading 3",
+                                    attributes: { "aria-label": "Insert heading level 3" }
+                                },
+                                "|",
+                                {
+                                    name: "quote",
+                                    action: EasyMDE.toggleBlockquote,
+                                    className: "fa fa-quote-left",
+                                    title: "Quote (Cmd-')",
+                                    attributes: { "aria-label": "Insert block quote" }
+                                },
+                                {
+                                    name: "unordered-list",
+                                    action: EasyMDE.toggleUnorderedList,
+                                    className: "fa fa-list-ul",
+                                    title: "Bullet List (Cmd-L)",
+                                    attributes: { "aria-label": "Insert unordered list" }
+                                },
+                                {
+                                    name: "ordered-list",
+                                    action: EasyMDE.toggleOrderedList,
+                                    className: "fa fa-list-ol",
+                                    title: "Numbered List (Cmd-Shift-L)",
+                                    attributes: { "aria-label": "Insert ordered list" }
+                                },
+                                "|",
+                                {
+                                    name: "link",
+                                    action: EasyMDE.drawLink,
+                                    className: "fa fa-link",
+                                    title: "Link (Cmd-K)",
+                                    attributes: { "aria-label": "Insert link" }
+                                },
+                                {
+                                    name: "image",
+                                    action: EasyMDE.drawImage,
+                                    className: "fa fa-image",
+                                    title: "Image",
+                                    attributes: { "aria-label": "Insert image" }
+                                },
+                                "|",
+                                {
+                                    name: "preview",
+                                    action: EasyMDE.togglePreview,
+                                    className: "fa fa-eye",
+                                    title: "Preview (Cmd-P)",
+                                    attributes: { "aria-label": "Toggle preview mode" }
+                                },
+                                {
+                                    name: "side-by-side",
+                                    action: EasyMDE.toggleSideBySide,
+                                    className: "fa fa-columns",
+                                    title: "Side by Side",
+                                    attributes: { "aria-label": "Toggle side by side view" }
+                                },
+                                {
+                                    name: "fullscreen",
+                                    action: EasyMDE.toggleFullScreen,
+                                    className: "fa fa-arrows-alt",
+                                    title: "Fullscreen (F11)",
+                                    attributes: { "aria-label": "Toggle fullscreen mode" }
+                                },
+                                "|",
+                                {
+                                    name: "guide",
+                                    action: "https://www.markdownguide.org/basic-syntax/",
+                                    className: "fa fa-question-circle",
+                                    title: "Markdown Guide",
+                                    attributes: { "aria-label": "Open markdown guide" }
+                                }
                             ],
                             placeholder: "Start your story...",
                             shortcuts: {
                                 "toggleBold": "Cmd-B",
                                 "toggleItalic": "Cmd-I",
                                 "toggleHeadingSmaller": "Cmd-H",
+                                "toggleBlockquote": "Cmd-'",
+                                "toggleUnorderedList": "Cmd-L",
+                                "toggleOrderedList": "Cmd-Shift-L",
+                                "drawLink": "Cmd-K",
+                                "togglePreview": "Cmd-P",
                             },
                         });
 
@@ -424,6 +648,35 @@ export class NovelEditorProvider implements vscode.CustomTextEditorProvider {
                         }
                     });
 
+                    // Track previous settings for detecting changes
+                    let previousSettings = null;
+
+                    function showToast(message, icon = '✓') {
+                        const container = document.getElementById('toastContainer');
+                        const toast = document.createElement('div');
+                        toast.className = 'toast';
+                        toast.innerHTML = '<span class="toast-icon">' + icon + '</span>' + message;
+                        container.appendChild(toast);
+
+                        // Auto-remove after delay
+                        setTimeout(() => {
+                            toast.classList.add('toast-out');
+                            setTimeout(() => toast.remove(), 200);
+                        }, 2000);
+                    }
+
+                    function updateModeIndicators(typewriter, focus) {
+                        const container = document.getElementById('modeIndicators');
+                        const typewriterBadge = document.getElementById('typewriterBadge');
+                        const focusBadge = document.getElementById('focusBadge');
+
+                        typewriterBadge.classList.toggle('active', typewriter);
+                        focusBadge.classList.toggle('active', focus);
+
+                        // Show container if any mode is active
+                        container.classList.toggle('visible', typewriter || focus);
+                    }
+
                     function applySettings(settings) {
                         const body = document.body;
                         const root = document.documentElement;
@@ -440,11 +693,22 @@ export class NovelEditorProvider implements vscode.CustomTextEditorProvider {
                         root.style.setProperty('--line-height', settings.lineHeight);
                         root.style.setProperty('--max-width', settings.maxWidth + 'px');
 
-                        // Typewriter mode
+                        // Typewriter mode with toast notification
+                        const typewriterChanged = previousSettings && previousSettings.typewriterMode !== settings.typewriterMode;
                         body.classList.toggle('typewriter-mode', settings.typewriterMode);
+                        if (typewriterChanged) {
+                            showToast(settings.typewriterMode ? 'Typewriter mode enabled' : 'Typewriter mode disabled', settings.typewriterMode ? '⌨️' : '✓');
+                        }
 
-                        // Focus mode
+                        // Focus mode with toast notification
+                        const focusChanged = previousSettings && previousSettings.focusMode !== settings.focusMode;
                         body.classList.toggle('focus-mode', settings.focusMode);
+                        if (focusChanged) {
+                            showToast(settings.focusMode ? 'Focus mode enabled' : 'Focus mode disabled', settings.focusMode ? '🎯' : '✓');
+                        }
+
+                        // Update mode indicators
+                        updateModeIndicators(settings.typewriterMode, settings.focusMode);
 
                         // Toolbar visibility
                         body.classList.toggle('toolbar-hidden', !settings.showToolbar);
@@ -453,6 +717,9 @@ export class NovelEditorProvider implements vscode.CustomTextEditorProvider {
                         if (easyMDE) {
                             easyMDE.codemirror.refresh();
                         }
+
+                        // Store current settings for next comparison
+                        previousSettings = { ...settings };
                     }
 
                     // Initialize

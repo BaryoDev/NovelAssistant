@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { DesignSystem } from '../styles/DesignSystem';
 
 interface WordFrequency {
     word: string;
@@ -310,23 +311,159 @@ export class WordAnalysisService {
 <html>
 <head>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
-        h1 { color: #569cd6; border-bottom: 1px solid #333; padding-bottom: 10px; }
-        h2 { color: #4ec9b0; margin-top: 25px; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
-        .stat-card { background: #252526; padding: 15px; border-radius: 8px; text-align: center; }
-        .stat-value { font-size: 24px; font-weight: bold; color: #569cd6; }
-        .stat-label { font-size: 12px; color: #888; margin-top: 5px; }
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #333; }
-        th { background: #252526; color: #4ec9b0; }
-        .tag { display: inline-block; padding: 4px 8px; border-radius: 4px; margin: 2px; font-size: 12px; }
-        .tag.warning { background: #4d3a00; color: #ffcc00; }
-        .tag.success { background: #1e3a1e; color: #4ec9b0; }
-        ul { padding-left: 20px; }
-        li { margin: 8px 0; font-style: italic; color: #888; }
-        .progress-bar { height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #d93025, #fbbc04, #34a853); }
+        ${DesignSystem.getCompleteStylesheet()}
+
+        body {
+            padding: var(--space-xl);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        h1 {
+            color: var(--color-primary);
+            border-bottom: 1px solid var(--border-primary);
+            padding-bottom: var(--space-md);
+            margin-bottom: var(--space-lg);
+            animation: slideDown var(--duration-normal) var(--easing-decelerate);
+        }
+
+        h2 {
+            color: var(--color-secondary);
+            margin-top: var(--space-xl);
+            font-size: 16px;
+            animation: slideDown var(--duration-normal) var(--easing-decelerate);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--space-lg);
+            margin: var(--space-xl) 0;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: var(--space-lg);
+            border-radius: var(--radius-lg);
+            text-align: center;
+            transition: transform var(--duration-normal) var(--easing-standard),
+                        box-shadow var(--duration-normal) var(--easing-standard);
+            animation: scaleIn var(--duration-normal) var(--easing-decelerate);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--color-primary);
+            letter-spacing: -0.01em;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: var(--space-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: var(--space-lg) 0;
+            animation: fadeIn var(--duration-slow) var(--easing-standard);
+        }
+
+        th, td {
+            padding: var(--space-sm) var(--space-md);
+            text-align: left;
+            border-bottom: 1px solid var(--border-primary);
+            transition: background-color var(--duration-fast) var(--easing-standard);
+        }
+
+        tr:hover td {
+            background: var(--bg-hover);
+        }
+
+        th {
+            background: var(--bg-secondary);
+            color: var(--color-secondary);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-sm);
+            margin: 2px;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all var(--duration-fast) var(--easing-standard);
+        }
+
+        .tag:hover {
+            transform: scale(1.05);
+        }
+
+        .tag.warning {
+            background: var(--status-revision-bg);
+            color: var(--status-revision-text);
+        }
+
+        .tag.success {
+            background: var(--status-complete-bg);
+            color: var(--status-complete-text);
+        }
+
+        ul {
+            padding-left: var(--space-xl);
+            animation: fadeIn var(--duration-slow) var(--easing-standard);
+        }
+
+        li {
+            margin: var(--space-sm) 0;
+            font-style: italic;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: var(--border-primary);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            margin-top: var(--space-md);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient-success);
+            transition: width var(--duration-slow) var(--easing-decelerate);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            animation: shimmer 2s infinite;
+        }
     </style>
 </head>
 <body>

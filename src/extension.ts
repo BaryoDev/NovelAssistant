@@ -12,6 +12,7 @@ import { GitContentProvider } from './services/GitContentProvider';
 import { CharacterPanelProvider } from './panels/CharacterPanelProvider';
 import { OutlineViewProvider } from './panels/OutlineViewProvider';
 import { ProgressDashboardProvider } from './panels/ProgressDashboardProvider';
+import { WelcomeViewProvider } from './panels/WelcomeViewProvider';
 
 // Services
 import { GitService } from './services/GitService';
@@ -43,6 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
     const characterPanel = new CharacterPanelProvider(context);
     const outlinePanel = new OutlineViewProvider(context);
     const progressDashboard = new ProgressDashboardProvider(context, statsService, novelProvider);
+    const welcomeView = new WelcomeViewProvider(context);
 
     // Register webview providers
     context.subscriptions.push(
@@ -359,6 +361,16 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+
+    // Welcome/Onboarding Command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('novel-assistant.showWelcome', () => {
+            welcomeView.show();
+        })
+    );
+
+    // Show welcome view on first run
+    welcomeView.showIfFirstRun();
 
     // Set Goals Command
     context.subscriptions.push(

@@ -18,18 +18,71 @@ export class NovelTreeDataProvider implements vscode.TreeDataProvider<NovelItem>
 
     getChildren(element?: NovelItem): Thenable<NovelItem[]> {
         if (!this.workspaceRoot) {
-            return Promise.resolve([]);
+            // No workspace - show guidance
+            return Promise.resolve([
+                this.createEmptyStateItem(
+                    '📁 Open a folder to get started',
+                    'Open a folder or workspace to begin organizing your novel',
+                    'workbench.action.files.openFolder'
+                )
+            ]);
         }
 
         const manuscriptPath = path.join(this.workspaceRoot, 'Manuscript');
 
         if (!fs.existsSync(manuscriptPath)) {
-            return Promise.resolve([]);
+            // Workspace exists but no Manuscript folder
+            return Promise.resolve([
+                this.createEmptyStateItem(
+                    '📝 Create your first project',
+                    'Set up the folder structure for your novel',
+                    'novel-assistant.newProject'
+                ),
+                this.createEmptyStateItem(
+                    '📖 New Chapter',
+                    'Create a new chapter folder',
+                    'novel-assistant.newChapter'
+                )
+            ]);
         }
 
         const searchPath = element ? element.resourceUri!.fsPath : manuscriptPath;
+        const items = this.getItems(searchPath);
 
-        return Promise.resolve(this.getItems(searchPath));
+        // If manuscript folder is empty, show guidance
+        if (items.length === 0 && !element) {
+            return Promise.resolve([
+                this.createEmptyStateItem(
+                    '📖 Create your first chapter',
+                    'Add a chapter to organize your scenes',
+                    'novel-assistant.newChapter'
+                ),
+                this.createEmptyStateItem(
+                    '✨ New Scene',
+                    'Start writing a new scene',
+                    'novel-assistant.newScene'
+                )
+            ]);
+        }
+
+        return Promise.resolve(items);
+    }
+
+    private createEmptyStateItem(label: string, tooltip: string, command: string): NovelItem {
+        const item = new NovelItem(
+            label,
+            vscode.TreeItemCollapsibleState.None,
+            vscode.Uri.parse('novel-assistant://empty'),
+            'empty-state',
+            {
+                command,
+                title: tooltip,
+                arguments: []
+            }
+        );
+        item.tooltip = tooltip;
+        item.iconPath = new vscode.ThemeIcon('lightbulb', new vscode.ThemeColor('charts.yellow'));
+        return item;
     }
 
     private getItems(searchPath: string): NovelItem[] {

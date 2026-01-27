@@ -137,6 +137,11 @@
             {
                 "command": "novel-assistant.setGoals",
                 "title": "Novel Assistant: Set Writing Goals"
+            },
+            {
+                "command": "novel-assistant.showWelcome",
+                "title": "Novel Assistant: Welcome",
+                "icon": "$(home)"
             }
         ],
         "menus": {

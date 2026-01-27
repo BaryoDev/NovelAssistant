@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { DesignSystem } from '../styles/DesignSystem';
 
 interface OutlineItem {
     id: string;
@@ -376,81 +377,166 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
 <html>
 <head>
     <style>
+        ${DesignSystem.getCompleteStylesheet()}
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            padding: 10px;
+            padding: var(--space-md);
             margin: 0;
             background: transparent;
-            color: var(--vscode-foreground);
+            color: var(--text-primary);
             font-size: 13px;
         }
+
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--vscode-widget-border);
+            margin-bottom: var(--space-md);
+            padding-bottom: var(--space-sm);
+            border-bottom: 1px solid var(--border-primary);
         }
-        .title { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; font-size: 11px; }
-        .total-words { font-size: 11px; opacity: 0.7; }
+
+        .title {
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.8;
+            font-size: 11px;
+        }
+
+        .total-words {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+
         .actions button {
             background: transparent;
             border: none;
-            color: var(--vscode-foreground);
+            color: var(--text-primary);
             cursor: pointer;
-            padding: 2px 6px;
+            padding: 2px var(--space-sm);
             font-size: 14px;
             opacity: 0.7;
+            transition: all var(--duration-fast) var(--easing-standard);
+            border-radius: var(--radius-sm);
         }
-        .actions button:hover { opacity: 1; }
+
+        .actions button:hover {
+            opacity: 1;
+            background: var(--bg-hover);
+            transform: scale(1.1);
+        }
 
         .outline-item {
-            padding: 6px 8px;
-            border-radius: 4px;
+            padding: var(--space-sm);
+            border-radius: var(--radius-sm);
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: var(--space-sm);
+            transition: all var(--duration-fast) var(--easing-standard);
         }
-        .outline-item:hover { background: var(--vscode-list-hoverBackground); }
-        .outline-item.chapter { flex-direction: column; align-items: stretch; }
+
+        .outline-item:hover {
+            background: var(--bg-hover);
+            transform: translateX(2px);
+        }
+
+        .outline-item.chapter {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
         .item-header {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 4px 0;
+            gap: var(--space-sm);
+            padding: var(--space-xs) 0;
         }
-        .expand-icon { font-size: 10px; opacity: 0.6; transition: transform 0.2s; }
-        .expand-icon.collapsed { transform: rotate(-90deg); }
-        .item-icon { font-size: 14px; }
+
+        .expand-icon {
+            font-size: 10px;
+            opacity: 0.6;
+            transition: transform var(--duration-normal) var(--easing-standard);
+        }
+
+        .expand-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .item-icon {
+            font-size: 14px;
+            transition: transform var(--duration-fast) var(--easing-standard);
+        }
+
+        .outline-item:hover .item-icon {
+            transform: scale(1.15);
+        }
+
         .item-title { flex: 1; }
-        .item-meta { font-size: 10px; opacity: 0.5; }
-        .chapter-children { margin-left: 10px; }
-        .chapter-children.collapsed { display: none; }
+
+        .item-meta {
+            font-size: 10px;
+            opacity: 0.5;
+        }
+
+        .chapter-children {
+            margin-left: var(--space-md);
+            overflow: hidden;
+            transition: all var(--duration-normal) var(--easing-standard);
+            max-height: 10000px;
+            opacity: 1;
+        }
+
+        .chapter-children.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+        }
 
         .status-badge {
             font-size: 10px;
-            padding: 1px 4px;
-            border-radius: 3px;
+            padding: 2px var(--space-xs);
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+            transition: all var(--duration-fast) var(--easing-standard);
         }
-        .status-badge.complete { background: #2d4a2d; color: #4ec9b0; }
-        .status-badge.revision { background: #4a3d2d; color: #ce9178; }
-        .status-badge.draft { background: #2d3a4a; color: #569cd6; }
+
+        .status-badge.complete {
+            background: var(--status-complete-bg);
+            color: var(--status-complete-text);
+        }
+
+        .status-badge.revision {
+            background: var(--status-revision-bg);
+            color: var(--status-revision-text);
+        }
+
+        .status-badge.draft {
+            background: var(--status-draft-bg);
+            color: var(--status-draft-text);
+        }
+
         .status-badge.none { opacity: 0.3; }
+
+        .status-badge:hover {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-sm);
+        }
 
         .outline-item.scene:focus,
         .item-header:focus {
-            outline: 2px solid var(--vscode-focusBorder);
+            outline: 2px solid var(--border-focus);
             outline-offset: 2px;
         }
 
         .empty-state {
             text-align: center;
-            padding: 30px 10px;
+            padding: var(--space-2xl) var(--space-md);
             opacity: 0.6;
             font-size: 12px;
             line-height: 1.6;
+            animation: fadeIn var(--duration-slow) var(--easing-standard);
         }
     </style>
 </head>

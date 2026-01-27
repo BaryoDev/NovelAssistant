@@ -114,8 +114,8 @@ export class CharacterPanelProvider implements vscode.WebviewViewProvider {
         try {
             const doc = await vscode.workspace.openTextDocument(filePath);
             await vscode.window.showTextDocument(doc);
-        } catch {
-            // Silent fail
+        } catch (error) {
+            vscode.window.showErrorMessage(`Could not open character file: ${error instanceof Error ? error.message : 'File not found'}`);
         }
     }
 
@@ -127,6 +127,15 @@ export class CharacterPanelProvider implements vscode.WebviewViewProvider {
         const name = await vscode.window.showInputBox({
             prompt: 'Enter character name',
             placeHolder: 'e.g., John Smith',
+            validateInput: (value) => {
+                if (!value || !value.trim()) {
+                    return 'Character name cannot be empty';
+                }
+                if (/[<>:"/\\|?*]/.test(value)) {
+                    return 'Character name contains invalid characters: < > : " / \\ | ? *';
+                }
+                return null;
+            },
         });
 
         if (!name) {
@@ -176,8 +185,8 @@ export class CharacterPanelProvider implements vscode.WebviewViewProvider {
             await vscode.window.showTextDocument(doc);
 
             this.refresh();
-        } catch {
-            // Silent fail
+        } catch (error) {
+            vscode.window.showErrorMessage(`Could not create character: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
@@ -186,7 +195,12 @@ export class CharacterPanelProvider implements vscode.WebviewViewProvider {
 
         const characterCards = characters.length > 0
             ? characters.map(c => `
-                <div class="character-card" onclick="openCharacter('${c.filePath.replace(/\\/g, '\\\\')}')">
+                <div class="character-card"
+                     role="button"
+                     tabindex="0"
+                     aria-label="Open character: ${c.name}"
+                     onclick="openCharacter('${c.filePath.replace(/\\/g, '\\\\')}')"
+                     onkeydown="handleCardKeydown(event, '${c.filePath.replace(/\\/g, '\\\\')}')">
                     <div class="character-avatar">${c.name.charAt(0).toUpperCase()}</div>
                     <div class="character-info">
                         <div class="character-name">${c.name}</div>
@@ -194,7 +208,11 @@ export class CharacterPanelProvider implements vscode.WebviewViewProvider {
                     </div>
                 </div>
             `).join('')
-            : '<div class="empty-state">No characters yet. Click + to add one.</div>';
+            : `<div class="empty-state">
+                <div class="empty-icon">👤</div>
+                <div class="empty-title">No characters yet</div>
+                <div class="empty-hint">Click the + button above to create your first character and bring your story to life.</div>
+            </div>`;
 
         return `<!DOCTYPE html>
 <html>
@@ -277,8 +295,25 @@ export class CharacterPanelProvider implements vscode.WebviewViewProvider {
         .empty-state {
             text-align: center;
             padding: 30px 10px;
-            opacity: 0.6;
+            opacity: 0.8;
             font-size: 12px;
+        }
+        .empty-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+            opacity: 0.6;
+        }
+        .empty-title {
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        .empty-hint {
+            opacity: 0.6;
+            line-height: 1.5;
+        }
+        .character-card:focus {
+            outline: 2px solid var(--vscode-focusBorder);
+            outline-offset: 2px;
         }
     </style>
 </head>
@@ -286,8 +321,8 @@ export class CharacterPanelProvider implements vscode.WebviewViewProvider {
     <div class="header">
         <span class="title">Characters</span>
         <div class="actions">
-            <button onclick="refresh()" title="Refresh">↻</button>
-            <button onclick="newCharacter()" title="New Character">+</button>
+            <button onclick="refresh()" title="Refresh" aria-label="Refresh character list">↻</button>
+            <button onclick="newCharacter()" title="New Character" aria-label="Create new character">+</button>
         </div>
     </div>
     <div class="character-list">
@@ -303,6 +338,12 @@ export class CharacterPanelProvider implements vscode.WebviewViewProvider {
         }
         function refresh() {
             vscode.postMessage({ command: 'refresh' });
+        }
+        function handleCardKeydown(event, filePath) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openCharacter(filePath);
+            }
         }
     </script>
 </body>

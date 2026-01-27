@@ -196,8 +196,8 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
         try {
             const doc = await vscode.workspace.openTextDocument(filePath);
             await vscode.window.showTextDocument(doc);
-        } catch {
-            // Silent fail
+        } catch (error) {
+            vscode.window.showErrorMessage(`Could not open file: ${error instanceof Error ? error.message : 'File not found'}`);
         }
     }
 
@@ -209,6 +209,15 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
         const name = await vscode.window.showInputBox({
             prompt: 'Enter chapter name',
             placeHolder: 'e.g., Chapter 1 - The Beginning',
+            validateInput: (value) => {
+                if (!value || !value.trim()) {
+                    return 'Chapter name cannot be empty';
+                }
+                if (/[<>:"/\\|?*]/.test(value)) {
+                    return 'Chapter name contains invalid characters: < > : " / \\ | ? *';
+                }
+                return null;
+            },
         });
 
         if (!name) {
@@ -228,8 +237,8 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
 
             this.refresh();
             vscode.window.showInformationMessage(`Created chapter: ${name}`);
-        } catch {
-            // Silent fail
+        } catch (error) {
+            vscode.window.showErrorMessage(`Could not create chapter: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
@@ -265,7 +274,8 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
                 }
 
                 targetPath = path.join(manuscriptPath, selected);
-            } catch {
+            } catch (error) {
+                vscode.window.showErrorMessage(`Could not access manuscript folder: ${error instanceof Error ? error.message : 'Unknown error'}`);
                 return;
             }
         }
@@ -273,6 +283,15 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
         const name = await vscode.window.showInputBox({
             prompt: 'Enter scene name',
             placeHolder: 'e.g., Scene 1 - Opening',
+            validateInput: (value) => {
+                if (!value || !value.trim()) {
+                    return 'Scene name cannot be empty';
+                }
+                if (/[<>:"/\\|?*]/.test(value)) {
+                    return 'Scene name contains invalid characters: < > : " / \\ | ? *';
+                }
+                return null;
+            },
         });
 
         if (!name || !targetPath) {
@@ -297,8 +316,8 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
             await vscode.window.showTextDocument(doc);
 
             this.refresh();
-        } catch {
-            // Silent fail
+        } catch (error) {
+            vscode.window.showErrorMessage(`Could not create scene: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
@@ -315,19 +334,31 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
                 const childrenHtml = item.children.map(c => renderItem(c, depth + 1)).join('');
                 return `
                     <div class="outline-item chapter" style="padding-left: ${indent}px;">
-                        <div class="item-header" onclick="toggleChapter(this)">
+                        <div class="item-header"
+                             role="button"
+                             tabindex="0"
+                             aria-expanded="true"
+                             aria-label="Chapter: ${item.title}, ${item.wordCount.toLocaleString()} words"
+                             onclick="toggleChapter(this)"
+                             onkeydown="handleChapterKeydown(event, this)">
                             <span class="expand-icon">▼</span>
                             <span class="item-icon">📁</span>
                             <span class="item-title">${item.title}</span>
                             <span class="item-meta">${item.wordCount.toLocaleString()} words</span>
                             <span class="status-badge ${statusClass}">${statusIcon}</span>
                         </div>
-                        <div class="chapter-children">${childrenHtml}</div>
+                        <div class="chapter-children" role="group">${childrenHtml}</div>
                     </div>
                 `;
             } else {
                 return `
-                    <div class="outline-item scene" style="padding-left: ${indent}px;" onclick="openFile('${item.filePath?.replace(/\\/g, '\\\\')}')">
+                    <div class="outline-item scene"
+                         style="padding-left: ${indent}px;"
+                         role="button"
+                         tabindex="0"
+                         aria-label="Scene: ${item.title}, ${item.wordCount.toLocaleString()} words"
+                         onclick="openFile('${item.filePath?.replace(/\\/g, '\\\\')}')"
+                         onkeydown="handleSceneKeydown(event, '${item.filePath?.replace(/\\/g, '\\\\')}')">
                         <span class="item-icon">📄</span>
                         <span class="item-title">${item.title}</span>
                         <span class="item-meta">${item.wordCount.toLocaleString()}</span>
@@ -408,6 +439,12 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
         .status-badge.draft { background: #2d3a4a; color: #569cd6; }
         .status-badge.none { opacity: 0.3; }
 
+        .outline-item.scene:focus,
+        .item-header:focus {
+            outline: 2px solid var(--vscode-focusBorder);
+            outline-offset: 2px;
+        }
+
         .empty-state {
             text-align: center;
             padding: 30px 10px;
@@ -422,9 +459,9 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
         <span class="title">Outline</span>
         <span class="total-words">${totalWords.toLocaleString()} words</span>
         <div class="actions">
-            <button onclick="refresh()" title="Refresh">↻</button>
-            <button onclick="newChapter()" title="New Chapter">📁+</button>
-            <button onclick="newScene()" title="New Scene">📄+</button>
+            <button onclick="refresh()" title="Refresh" aria-label="Refresh outline">↻</button>
+            <button onclick="newChapter()" title="New Chapter" aria-label="Create new chapter">📁+</button>
+            <button onclick="newScene()" title="New Scene" aria-label="Create new scene">📄+</button>
         </div>
     </div>
     <div class="outline-container">
@@ -448,8 +485,21 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
         function toggleChapter(header) {
             const icon = header.querySelector('.expand-icon');
             const children = header.nextElementSibling;
-            icon.classList.toggle('collapsed');
+            const isCollapsed = icon.classList.toggle('collapsed');
             children.classList.toggle('collapsed');
+            header.setAttribute('aria-expanded', !isCollapsed);
+        }
+        function handleChapterKeydown(event, header) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                toggleChapter(header);
+            }
+        }
+        function handleSceneKeydown(event, filePath) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openFile(filePath);
+            }
         }
     </script>
 </body>

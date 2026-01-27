@@ -85,10 +85,10 @@ export class ProgressDashboardProvider {
         const weekBars = weekData.map((words, i) => {
             const height = maxWeekWords > 0 ? Math.round((words / maxWeekWords) * 150) : 0;
             const isGoalMet = words >= goals.dailyWordGoal;
-            const barColor = isGoalMet ? '#34a853' : '#569cd6';
+            const barClass = isGoalMet ? 'bar goal-met' : 'bar';
             return `
                 <div class="bar-container">
-                    <div class="bar" style="height: ${height}px; background: ${barColor};">
+                    <div class="${barClass}" style="height: ${height}px;">
                         <span class="bar-value">${words > 0 ? words.toLocaleString() : ''}</span>
                     </div>
                     <span class="bar-label">${weekLabels[i]}</span>
@@ -100,16 +100,28 @@ export class ProgressDashboardProvider {
 <html>
 <head>
     <style>
+        :root {
+            --success-color: var(--vscode-testing-iconPassed, #34a853);
+            --warning-color: var(--vscode-editorWarning-foreground, #fbbc04);
+            --primary-color: var(--vscode-textLink-foreground, #569cd6);
+            --secondary-color: var(--vscode-symbolIcon-classForeground, #4ec9b0);
+            --accent-color: var(--vscode-symbolIcon-stringForeground, #ce9178);
+            --bg-color: var(--vscode-editor-background, #1e1e1e);
+            --text-color: var(--vscode-editor-foreground, #d4d4d4);
+            --card-bg: var(--vscode-editorWidget-background, #252526);
+            --muted-text: var(--vscode-descriptionForeground, #888);
+            --border-color: var(--vscode-widget-border, #333);
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             padding: 20px;
-            background: #1e1e1e;
-            color: #d4d4d4;
+            background: var(--bg-color);
+            color: var(--text-color);
             margin: 0;
         }
-        h1 { color: #569cd6; margin-bottom: 5px; }
-        h2 { color: #4ec9b0; margin-top: 30px; font-size: 16px; }
-        .subtitle { color: #888; margin-bottom: 25px; }
+        h1 { color: var(--primary-color); margin-bottom: 5px; }
+        h2 { color: var(--secondary-color); margin-top: 30px; font-size: 16px; }
+        .subtitle { color: var(--muted-text); margin-bottom: 25px; }
 
         .stats-grid {
             display: grid;
@@ -118,7 +130,7 @@ export class ProgressDashboardProvider {
             margin: 20px 0;
         }
         .stat-card {
-            background: #252526;
+            background: var(--card-bg);
             padding: 20px;
             border-radius: 12px;
             text-align: center;
@@ -128,21 +140,21 @@ export class ProgressDashboardProvider {
         .stat-value {
             font-size: 28px;
             font-weight: bold;
-            color: #569cd6;
+            color: var(--primary-color);
         }
         .stat-label {
             font-size: 12px;
-            color: #888;
+            color: var(--muted-text);
             margin-top: 8px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .stat-card.highlight .stat-value { color: #34a853; }
-        .stat-card.warning .stat-value { color: #fbbc04; }
-        .stat-card.accent .stat-value { color: #ce9178; }
+        .stat-card.highlight .stat-value { color: var(--success-color); }
+        .stat-card.warning .stat-value { color: var(--warning-color); }
+        .stat-card.accent .stat-value { color: var(--accent-color); }
 
         .progress-section {
-            background: #252526;
+            background: var(--card-bg);
             padding: 20px;
             border-radius: 12px;
             margin: 20px 0;
@@ -154,10 +166,10 @@ export class ProgressDashboardProvider {
             margin-bottom: 10px;
         }
         .progress-title { font-weight: 500; }
-        .progress-value { color: #888; font-size: 14px; }
+        .progress-value { color: var(--muted-text); font-size: 14px; }
         .progress-bar {
             height: 12px;
-            background: #333;
+            background: var(--border-color);
             border-radius: 6px;
             overflow: hidden;
         }
@@ -166,11 +178,11 @@ export class ProgressDashboardProvider {
             border-radius: 6px;
             transition: width 0.5s ease;
         }
-        .progress-fill.daily { background: linear-gradient(90deg, #569cd6, #4ec9b0); }
-        .progress-fill.project { background: linear-gradient(90deg, #ce9178, #d93025); }
+        .progress-fill.daily { background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); }
+        .progress-fill.project { background: linear-gradient(90deg, var(--accent-color), var(--vscode-editorError-foreground, #d93025)); }
 
         .week-chart {
-            background: #252526;
+            background: var(--card-bg);
             padding: 20px;
             border-radius: 12px;
             margin: 20px 0;
@@ -194,6 +206,10 @@ export class ProgressDashboardProvider {
             position: relative;
             min-height: 2px;
             transition: height 0.3s;
+            background: var(--primary-color);
+        }
+        .bar.goal-met {
+            background: var(--success-color);
         }
         .bar-value {
             position: absolute;
@@ -201,13 +217,13 @@ export class ProgressDashboardProvider {
             left: 50%;
             transform: translateX(-50%);
             font-size: 10px;
-            color: #888;
+            color: var(--muted-text);
             white-space: nowrap;
         }
         .bar-label {
             margin-top: 8px;
             font-size: 11px;
-            color: #888;
+            color: var(--muted-text);
         }
         .goal-line {
             position: absolute;
@@ -223,17 +239,17 @@ export class ProgressDashboardProvider {
         }
         .streak-card {
             flex: 1;
-            background: #252526;
+            background: var(--card-bg);
             padding: 20px;
             border-radius: 12px;
             text-align: center;
         }
         .streak-icon { font-size: 32px; margin-bottom: 10px; }
-        .streak-value { font-size: 36px; font-weight: bold; color: #fbbc04; }
-        .streak-label { font-size: 12px; color: #888; margin-top: 5px; }
+        .streak-value { font-size: 36px; font-weight: bold; color: var(--warning-color); }
+        .streak-label { font-size: 12px; color: var(--muted-text); margin-top: 5px; }
 
         .tips-section {
-            background: #252526;
+            background: var(--card-bg);
             padding: 20px;
             border-radius: 12px;
             margin-top: 20px;
@@ -243,11 +259,11 @@ export class ProgressDashboardProvider {
             align-items: flex-start;
             gap: 10px;
             padding: 10px 0;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid var(--border-color);
         }
         .tip:last-child { border-bottom: none; }
         .tip-icon { font-size: 18px; }
-        .tip-text { color: #888; font-size: 14px; }
+        .tip-text { color: var(--muted-text); font-size: 14px; }
     </style>
 </head>
 <body>

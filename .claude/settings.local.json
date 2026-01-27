@@ -9,7 +9,15 @@
       "Bash(git fetch:*)",
       "Bash(git push:*)",
       "Bash(git pull:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(npx vsce package)",
+      "Bash(code --install-extension:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: Update changelog for v0.1.0 release\n\nDocument all new features including editor themes, writing sprints,\nprogress dashboard, export options, and robustness improvements.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npx @vscode/vsce package:*)",
+      "Bash(git commit:*)",
+      "Bash(npx @vscode/vsce publish)",
+      "Bash(open:*)"
     ]
   }
 }

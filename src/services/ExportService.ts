@@ -65,7 +65,8 @@ export class ExportService {
                 stream.on('finish', () => resolve(true));
                 stream.on('error', () => resolve(false));
             });
-        } catch {
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to export PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
             return false;
         }
     }
@@ -137,7 +138,8 @@ export class ExportService {
             fs.writeFileSync(outputPath, buffer);
 
             return true;
-        } catch {
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to export DOCX: ${error instanceof Error ? error.message : 'Unknown error'}`);
             return false;
         }
     }
@@ -166,7 +168,8 @@ export class ExportService {
             }
 
             return true;
-        } catch {
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to export EPUB: ${error instanceof Error ? error.message : 'Unknown error'}`);
             return false;
         }
     }
@@ -194,7 +197,8 @@ export class ExportService {
 
             fs.writeFileSync(outputPath, markdown);
             return true;
-        } catch {
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to export Markdown: ${error instanceof Error ? error.message : 'Unknown error'}`);
             return false;
         }
     }
@@ -212,8 +216,8 @@ export class ExportService {
                     const cleanContent = this.stripMarkdown(content);
                     result.push({ text: cleanContent, isHeading: false });
                 }
-            } catch {
-                // Skip files that can't be read
+            } catch (error) {
+                vscode.window.showWarningMessage(`Could not read file: ${path.basename(file)}`);
             }
         }
 
@@ -231,8 +235,8 @@ export class ExportService {
                     const htmlContent = this.markdownToHtml(content);
                     result.push({ title: fileName, content: htmlContent });
                 }
-            } catch {
-                // Skip files that can't be read
+            } catch (error) {
+                vscode.window.showWarningMessage(`Could not read file: ${path.basename(file)}`);
             }
         }
 
@@ -315,20 +319,29 @@ export class ExportService {
         const options: ExportOptions = { title, author };
         let success = false;
 
-        switch (format) {
-            case 'PDF':
-                success = await this.exportToPDF(files, outputUri.fsPath, options);
-                break;
-            case 'DOCX':
-                success = await this.exportToDOCX(files, outputUri.fsPath, options);
-                break;
-            case 'EPUB':
-                success = await this.exportToEPUB(files, outputUri.fsPath, options);
-                break;
-            case 'Markdown':
-                success = await this.exportToMarkdown(files, outputUri.fsPath, options);
-                break;
-        }
+        await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: `Exporting to ${format}...`,
+                cancellable: false,
+            },
+            async () => {
+                switch (format) {
+                    case 'PDF':
+                        success = await this.exportToPDF(files, outputUri.fsPath, options);
+                        break;
+                    case 'DOCX':
+                        success = await this.exportToDOCX(files, outputUri.fsPath, options);
+                        break;
+                    case 'EPUB':
+                        success = await this.exportToEPUB(files, outputUri.fsPath, options);
+                        break;
+                    case 'Markdown':
+                        success = await this.exportToMarkdown(files, outputUri.fsPath, options);
+                        break;
+                }
+            }
+        );
 
         if (success) {
             const openFile = await vscode.window.showInformationMessage(
@@ -342,6 +355,8 @@ export class ExportService {
             } else if (openFile === 'Open Folder') {
                 vscode.commands.executeCommand('revealFileInOS', outputUri);
             }
+        } else {
+            vscode.window.showErrorMessage(`Export to ${format} failed. Please check the file path and try again.`);
         }
     }
 
@@ -371,8 +386,8 @@ export class ExportService {
                     files.push(fullPath);
                 }
             }
-        } catch {
-            // Silent fail
+        } catch (error) {
+            vscode.window.showWarningMessage(`Could not read manuscript directory: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
 
         return files;

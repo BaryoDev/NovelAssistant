@@ -7,13 +7,13 @@ export class GitContentProvider implements vscode.TextDocumentContentProvider {
 
     onDidChange?: vscode.Event<vscode.Uri> | undefined;
 
-    provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> {
+    provideTextDocumentContent(uri: vscode.Uri, _token: vscode.CancellationToken): vscode.ProviderResult<string> {
         // format: novel-git:/absolute/path/to/file.md?{"ref":"HEAD"}
         const fsPath = uri.fsPath;
         const query = JSON.parse(uri.query);
         const ref = query.ref || 'HEAD';
 
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, _reject) => {
             const cwd = path.dirname(fsPath);
             const fileName = path.basename(fsPath);
 

@@ -46,7 +46,7 @@ export class WelcomeViewProvider {
                     await this.onboardingService.markOnboardingComplete();
                     break;
                 case 'openDocs':
-                    vscode.env.openExternal(vscode.Uri.parse('https://github.com/your-repo/novel-assistant#readme'));
+                    vscode.env.openExternal(vscode.Uri.parse('https://github.com/BaryoDev/NovelAssistant#readme'));
                     break;
             }
         });

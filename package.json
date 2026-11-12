@@ -10,11 +10,11 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/arnelirobles/novel-assistant.git"
+        "url": "https://github.com/BaryoDev/NovelAssistant.git"
     },
-    "homepage": "https://github.com/arnelirobles/novel-assistant/blob/master/README.md",
+    "homepage": "https://github.com/BaryoDev/NovelAssistant#readme",
     "bugs": {
-        "url": "https://github.com/arnelirobles/novel-assistant/issues"
+        "url": "https://github.com/BaryoDev/NovelAssistant/issues"
     },
     "keywords": [
         "novel",

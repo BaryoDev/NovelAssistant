@@ -41,6 +41,9 @@ Automatically organizes your workspace into:
 
 ## 📝 Release Notes
 
+### 0.1.0
+- See the [CHANGELOG](https://github.com/BaryoDev/NovelAssistant/blob/main/CHANGELOG.md) for the full list.
+
 ### 0.0.1
 - Initial release.
 - Brand new "Distraction-Free" Editor design.

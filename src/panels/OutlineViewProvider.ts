@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { DesignSystem } from '../styles/DesignSystem';
+import { renderOutlineItem } from '../util/render';
+import { getNonce, isInsideDir } from '../util/security';
 
 interface OutlineItem {
     id: string;
@@ -40,19 +42,27 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
         webviewView.webview.onDidReceiveMessage(async (message) => {
             switch (message.command) {
                 case 'openFile':
-                    this.openFile(message.filePath);
+                    if (this.isInManuscript(message.filePath)) {
+                        this.openFile(message.filePath);
+                    }
                     break;
                 case 'newChapter':
                     this.createNewChapter();
                     break;
                 case 'newScene':
-                    this.createNewScene(message.chapterPath);
+                    if (message.chapterPath === undefined || this.isInManuscript(message.chapterPath)) {
+                        this.createNewScene(message.chapterPath);
+                    }
                     break;
                 case 'refresh':
                     this.refresh();
                     break;
             }
         });
+    }
+
+    private isInManuscript(target: unknown): boolean {
+        return !!this.rootPath && isInsideDir(path.join(this.rootPath, 'Manuscript'), target);
     }
 
     public refresh(): void {
@@ -326,48 +336,9 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
         const outline = this.getOutline();
         const totalWords = outline.reduce((sum, item) => sum + item.wordCount, 0);
 
-        const renderItem = (item: OutlineItem, depth: number = 0): string => {
-            const indent = depth * 20;
-            const statusIcon = this.getStatusIcon(item.status);
-            const statusClass = item.status;
-
-            if (item.type === 'chapter') {
-                const childrenHtml = item.children.map(c => renderItem(c, depth + 1)).join('');
-                return `
-                    <div class="outline-item chapter" style="padding-left: ${indent}px;">
-                        <div class="item-header"
-                             role="button"
-                             tabindex="0"
-                             aria-expanded="true"
-                             aria-label="Chapter: ${item.title}, ${item.wordCount.toLocaleString()} words"
-                             onclick="toggleChapter(this)"
-                             onkeydown="handleChapterKeydown(event, this)">
-                            <span class="expand-icon">▼</span>
-                            <span class="item-icon">📁</span>
-                            <span class="item-title">${item.title}</span>
-                            <span class="item-meta">${item.wordCount.toLocaleString()} words</span>
-                            <span class="status-badge ${statusClass}">${statusIcon}</span>
-                        </div>
-                        <div class="chapter-children" role="group">${childrenHtml}</div>
-                    </div>
-                `;
-            } else {
-                return `
-                    <div class="outline-item scene"
-                         style="padding-left: ${indent}px;"
-                         role="button"
-                         tabindex="0"
-                         aria-label="Scene: ${item.title}, ${item.wordCount.toLocaleString()} words"
-                         onclick="openFile('${item.filePath?.replace(/\\/g, '\\\\')}')"
-                         onkeydown="handleSceneKeydown(event, '${item.filePath?.replace(/\\/g, '\\\\')}')">
-                        <span class="item-icon">📄</span>
-                        <span class="item-title">${item.title}</span>
-                        <span class="item-meta">${item.wordCount.toLocaleString()}</span>
-                        <span class="status-badge ${statusClass}">${statusIcon}</span>
-                    </div>
-                `;
-            }
-        };
+        const nonce = getNonce();
+        const renderItem = (item: OutlineItem): string =>
+            renderOutlineItem(item, status => this.getStatusIcon(status));
 
         const outlineHtml = outline.length > 0
             ? outline.map(item => renderItem(item)).join('')
@@ -376,6 +347,7 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
         return `<!DOCTYPE html>
 <html>
 <head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
     <style>
         ${DesignSystem.getCompleteStylesheet()}
 
@@ -545,29 +517,17 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
         <span class="title">Outline</span>
         <span class="total-words">${totalWords.toLocaleString()} words</span>
         <div class="actions">
-            <button onclick="refresh()" title="Refresh" aria-label="Refresh outline">↻</button>
-            <button onclick="newChapter()" title="New Chapter" aria-label="Create new chapter">📁+</button>
-            <button onclick="newScene()" title="New Scene" aria-label="Create new scene">📄+</button>
+            <button id="refresh-btn" title="Refresh" aria-label="Refresh outline">↻</button>
+            <button id="chapter-btn" title="New Chapter" aria-label="Create new chapter">📁+</button>
+            <button id="scene-btn" title="New Scene" aria-label="Create new scene">📄+</button>
         </div>
     </div>
     <div class="outline-container">
         ${outlineHtml}
     </div>
-    <script>
+    <script nonce="${nonce}">
         const vscode = acquireVsCodeApi();
 
-        function openFile(filePath) {
-            vscode.postMessage({ command: 'openFile', filePath });
-        }
-        function newChapter() {
-            vscode.postMessage({ command: 'newChapter' });
-        }
-        function newScene(chapterPath) {
-            vscode.postMessage({ command: 'newScene', chapterPath });
-        }
-        function refresh() {
-            vscode.postMessage({ command: 'refresh' });
-        }
         function toggleChapter(header) {
             const icon = header.querySelector('.expand-icon');
             const children = header.nextElementSibling;
@@ -575,18 +535,23 @@ export class OutlineViewProvider implements vscode.WebviewViewProvider {
             children.classList.toggle('collapsed');
             header.setAttribute('aria-expanded', !isCollapsed);
         }
-        function handleChapterKeydown(event, header) {
+        function activate(target) {
+            const header = target.closest('.item-header');
+            if (header) { toggleChapter(header); return; }
+            const scene = target.closest('.outline-item.scene');
+            if (scene) { vscode.postMessage({ command: 'openFile', filePath: scene.dataset.path }); }
+        }
+        document.getElementById('refresh-btn').addEventListener('click', () => vscode.postMessage({ command: 'refresh' }));
+        document.getElementById('chapter-btn').addEventListener('click', () => vscode.postMessage({ command: 'newChapter' }));
+        document.getElementById('scene-btn').addEventListener('click', () => vscode.postMessage({ command: 'newScene' }));
+        const container = document.querySelector('.outline-container');
+        container.addEventListener('click', (event) => activate(event.target));
+        container.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                toggleChapter(header);
+                activate(event.target);
             }
-        }
-        function handleSceneKeydown(event, filePath) {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                openFile(filePath);
-            }
-        }
+        });
     </script>
 </body>
 </html>`;

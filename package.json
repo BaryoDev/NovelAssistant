@@ -34,6 +34,12 @@
     "engines": {
         "vscode": "^1.85.0"
     },
+    "capabilities": {
+        "untrustedWorkspaces": {
+            "supported": "limited",
+            "description": "Compare with Saved runs git in the folder and is disabled until the workspace is trusted."
+        }
+    },
     "categories": [
         "Other",
         "Visualization"
@@ -364,9 +370,9 @@
         "package": "webpack --mode production --devtool hidden-source-map",
         "compile-tests": "tsc -p . --outDir out",
         "watch-tests": "tsc -p . -w --outDir out",
-        "pretest": "npm run compile-tests && npm run compile && npm run lint",
+        "pretest": "npm run compile-tests && npm run lint",
         "lint": "eslint src --ext ts",
-        "test": "node ./out/test/runTest.js"
+        "test": "mocha \"out/test/**/*.test.js\""
     },
     "devDependencies": {
         "@types/glob": "^8.1.0",

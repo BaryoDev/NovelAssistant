@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { DesignSystem } from '../styles/DesignSystem';
+import { renderTopWordRows, renderOverusedWords, renderPassiveVoice } from '../util/render';
 
 interface WordFrequency {
     word: string;
@@ -284,25 +285,16 @@ export class WordAnalysisService {
             'novelAnalysis',
             'Writing Analysis',
             vscode.ViewColumn.Two,
-            { enableScripts: true }
+            { enableScripts: false }
         );
 
         panel.webview.html = this.getAnalysisHtml(result);
     }
 
     private getAnalysisHtml(result: AnalysisResult): string {
-        const topWordsHtml = result.topWords
-            .slice(0, 15)
-            .map(w => `<tr><td>${w.word}</td><td>${w.count}</td><td>${w.percentage}%</td></tr>`)
-            .join('');
-
-        const overusedHtml = result.overusedWords.length > 0
-            ? result.overusedWords.map(w => `<span class="tag warning">${w.word} (${w.count}x)</span>`).join(' ')
-            : '<span class="tag success">No overused words detected</span>';
-
-        const passiveHtml = result.passiveVoiceInstances.length > 0
-            ? result.passiveVoiceInstances.map(s => `<li>"${s}"</li>`).join('')
-            : '<li>No passive voice instances detected</li>';
+        const topWordsHtml = renderTopWordRows(result.topWords.slice(0, 15));
+        const overusedHtml = renderOverusedWords(result.overusedWords);
+        const passiveHtml = renderPassiveVoice(result.passiveVoiceInstances);
 
         const readabilityLabel = result.readabilityScore >= 60 ? 'Easy' :
             result.readabilityScore >= 30 ? 'Moderate' : 'Difficult';
@@ -310,6 +302,7 @@ export class WordAnalysisService {
         return `<!DOCTYPE html>
 <html>
 <head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';">
     <style>
         ${DesignSystem.getCompleteStylesheet()}
 

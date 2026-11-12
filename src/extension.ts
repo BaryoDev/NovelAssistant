@@ -138,6 +138,10 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('novel-assistant.compareHead', async (item: vscode.TreeItem) => {
             if (!item?.resourceUri) { return; }
+            if (!vscode.workspace.isTrusted) {
+                vscode.window.showWarningMessage('Trust this workspace to compare with the saved version.');
+                return;
+            }
 
             try {
                 const docUri = item.resourceUri;

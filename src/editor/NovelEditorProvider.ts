@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs';
 
 export class NovelEditorProvider implements vscode.CustomTextEditorProvider {
 
@@ -106,24 +104,16 @@ export class NovelEditorProvider implements vscode.CustomTextEditorProvider {
             vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'vendor', 'js', 'easymde.min.js')
         );
 
-        // Check if local files exist, otherwise use CDN
-        const vendorPath = path.join(this.context.extensionPath, 'resources', 'vendor', 'js', 'easymde.min.js');
-        const useLocalAssets = fs.existsSync(vendorPath);
-
-        const cssLink = useLocalAssets
-            ? `<link rel="stylesheet" href="${vendorCssUri}">`
-            : `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">`;
-
-        const jsScript = useLocalAssets
-            ? `<script src="${vendorJsUri}"></script>`
-            : `<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>`;
+        // EasyMDE ships in resources/vendor; there is no network fallback.
+        const cssLink = `<link rel="stylesheet" href="${vendorCssUri}">`;
+        const jsScript = `<script src="${vendorJsUri}"></script>`;
 
         return `
             <!DOCTYPE html>
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src https://fonts.gstatic.com https://use.fontawesome.com ${webview.cspSource}; style-src 'unsafe-inline' https://cdn.jsdelivr.net https://use.fontawesome.com https://fonts.googleapis.com ${webview.cspSource}; script-src 'unsafe-inline' https://cdn.jsdelivr.net ${webview.cspSource}; img-src ${webview.cspSource} https: data:;">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src https://fonts.gstatic.com https://use.fontawesome.com ${webview.cspSource}; style-src 'unsafe-inline' https://use.fontawesome.com https://fonts.googleapis.com ${webview.cspSource}; script-src 'unsafe-inline' ${webview.cspSource}; img-src ${webview.cspSource} https: data:;">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Novel Editor</title>
                 ${cssLink}

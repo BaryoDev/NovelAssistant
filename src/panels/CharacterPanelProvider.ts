@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { DesignSystem } from '../styles/DesignSystem';
+import { renderCharacterCard } from '../util/render';
+import { getNonce, isInsideDir } from '../util/security';
 
 interface Character {
     name: string;
@@ -36,7 +38,9 @@ export class CharacterPanelProvider implements vscode.WebviewViewProvider {
         webviewView.webview.onDidReceiveMessage(async (message) => {
             switch (message.command) {
                 case 'openCharacter':
-                    this.openCharacter(message.filePath);
+                    if (this.rootPath && isInsideDir(path.join(this.rootPath, 'Characters'), message.filePath)) {
+                        this.openCharacter(message.filePath);
+                    }
                     break;
                 case 'newCharacter':
                     this.createNewCharacter();
@@ -193,22 +197,10 @@ export class CharacterPanelProvider implements vscode.WebviewViewProvider {
 
     private getHtml(): string {
         const characters = this.getCharacters();
+        const nonce = getNonce();
 
         const characterCards = characters.length > 0
-            ? characters.map(c => `
-                <div class="character-card"
-                     role="button"
-                     tabindex="0"
-                     aria-label="Open character: ${c.name}"
-                     onclick="openCharacter('${c.filePath.replace(/\\/g, '\\\\')}')"
-                     onkeydown="handleCardKeydown(event, '${c.filePath.replace(/\\/g, '\\\\')}')">
-                    <div class="character-avatar">${c.name.charAt(0).toUpperCase()}</div>
-                    <div class="character-info">
-                        <div class="character-name">${c.name}</div>
-                        ${c.role ? `<div class="character-role">${c.role}</div>` : ''}
-                    </div>
-                </div>
-            `).join('')
+            ? characters.map(c => renderCharacterCard(c)).join('')
             : `<div class="empty-state">
                 <div class="empty-icon">👤</div>
                 <div class="empty-title">No characters yet</div>
@@ -218,6 +210,7 @@ export class CharacterPanelProvider implements vscode.WebviewViewProvider {
         return `<!DOCTYPE html>
 <html>
 <head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
     <style>
         ${DesignSystem.getCompleteStylesheet()}
 
@@ -363,30 +356,31 @@ export class CharacterPanelProvider implements vscode.WebviewViewProvider {
     <div class="header">
         <span class="title">Characters</span>
         <div class="actions">
-            <button onclick="refresh()" title="Refresh" aria-label="Refresh character list">↻</button>
-            <button onclick="newCharacter()" title="New Character" aria-label="Create new character">+</button>
+            <button id="refresh-btn" title="Refresh" aria-label="Refresh character list">↻</button>
+            <button id="new-btn" title="New Character" aria-label="Create new character">+</button>
         </div>
     </div>
     <div class="character-list">
         ${characterCards}
     </div>
-    <script>
+    <script nonce="${nonce}">
         const vscode = acquireVsCodeApi();
-        function openCharacter(filePath) {
-            vscode.postMessage({ command: 'openCharacter', filePath });
+        function openCard(card) {
+            vscode.postMessage({ command: 'openCharacter', filePath: card.dataset.path });
         }
-        function newCharacter() {
-            vscode.postMessage({ command: 'newCharacter' });
-        }
-        function refresh() {
-            vscode.postMessage({ command: 'refresh' });
-        }
-        function handleCardKeydown(event, filePath) {
-            if (event.key === 'Enter' || event.key === ' ') {
+        document.getElementById('refresh-btn').addEventListener('click', () => vscode.postMessage({ command: 'refresh' }));
+        document.getElementById('new-btn').addEventListener('click', () => vscode.postMessage({ command: 'newCharacter' }));
+        document.querySelector('.character-list').addEventListener('click', (event) => {
+            const card = event.target.closest('.character-card');
+            if (card) { openCard(card); }
+        });
+        document.querySelector('.character-list').addEventListener('keydown', (event) => {
+            const card = event.target.closest('.character-card');
+            if (card && (event.key === 'Enter' || event.key === ' ')) {
                 event.preventDefault();
-                openCharacter(filePath);
+                openCard(card);
             }
-        }
+        });
     </script>
 </body>
 </html>`;

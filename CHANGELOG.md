@@ -4,6 +4,10 @@ All notable changes to the "Novel Assistant" extension will be documented in thi
 
 Source code: https://github.com/BaryoDev/NovelAssistant
 
+## [Unreleased]
+
+- Security: Compare with Saved no longer runs a shell command built from the file name; webview panels escape file text and check message paths.
+
 ## [0.1.0] - 2025-01-20
 
 ### New Features

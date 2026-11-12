@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as path from 'path';
+import { buildGitShowArgs } from '../util/security';
 
 export class GitContentProvider implements vscode.TextDocumentContentProvider {
     static scheme = 'novel-git';
@@ -10,18 +11,27 @@ export class GitContentProvider implements vscode.TextDocumentContentProvider {
     provideTextDocumentContent(uri: vscode.Uri, _token: vscode.CancellationToken): vscode.ProviderResult<string> {
         // format: novel-git:/absolute/path/to/file.md?{"ref":"HEAD"}
         const fsPath = uri.fsPath;
-        const query = JSON.parse(uri.query);
-        const ref = query.ref || 'HEAD';
+        let ref = 'HEAD';
+        try {
+            ref = JSON.parse(uri.query).ref || 'HEAD';
+        } catch {
+            return '(Invalid compare request)';
+        }
 
         return new Promise((resolve, _reject) => {
             const cwd = path.dirname(fsPath);
             const fileName = path.basename(fsPath);
 
-            // git show HEAD:./filename
-            // We use relative path ./filename to ensure git understands it relative to cwd
-            const command = `git show ${ref}:./${fileName}`;
+            // git show HEAD:./filename, run without a shell so the file name is one argument
+            let args: string[];
+            try {
+                args = buildGitShowArgs(ref, fileName);
+            } catch {
+                resolve('(Invalid git ref)');
+                return;
+            }
 
-            cp.exec(command, { cwd }, (error, stdout, stderr) => {
+            cp.execFile('git', args, { cwd, maxBuffer: 64 * 1024 * 1024 }, (error, stdout, stderr) => {
                 if (error) {
                     // If file is new and doesn't exist in HEAD, show empty
                     if (stderr.includes('does not exist in')) {
